@@ -234,10 +234,8 @@ EOF
     echo "$TIMEZONE" > "$ROOT/etc/timezone"
     chroot "$ROOT" /bin/sh -c "dpkg-reconfigure -f noninteractive tzdata" >> "$LOG_FILE" 2>&1
 
-    chroot "$ROOT" /bin/sh -c "apt-get install acpi acpi-support-base acpid laptop-detect discover pciutils usbutils openssh-client openssh-server --yes" >> "$LOG_FILE" 2>&1
+    chroot "$ROOT" /bin/sh -c "apt-get install acpi acpi-support-base acpid laptop-detect discover pciutils usbutils openssh-client openssh-server bash-completion command-not-found --yes" >> "$LOG_FILE" 2>&1
 }
-
-# pre_download () {}
 
 kernel_install () {
     echo "=== Installing Kernel"
@@ -277,6 +275,11 @@ EOF
 
 }
 
+pre_download () {
+    echo "=== Downloading Packages"
+    echo "=== Downloading Packages" >> "$LOG_FILE"
+}
+
 desktop_install () {
     echo "=== Installing the Desktop"
     echo "=== Installing the Desktop" >> "$LOG_FILE"
@@ -290,6 +293,12 @@ desktop_install () {
     chroot "$ROOT" /bin/sh -c "dpkg --add-architecture i386" >> "$LOG_FILE" 2>&1
     chroot "$ROOT" /bin/sh -c "apt-get update" >> "$LOG_FILE" 2>&1
     chroot "$ROOT" /bin/sh -c "apt-get install libc6:i386 libgl1-mesa-dri:i386 libgl1-mesa-glx:i386 steamos-modeswitch-inhibitor:i386 steam:i386 libtxc-dxtn-s2tc0:i386 libgl1-fglrx-glx:i386 --yes" >> "$LOG_FILE" 2>&1
+
+    # TODO: Make optional
+    echo "=== Installing nVidia Drivers"
+    echo "=== Installing nVidia Drivers" >> "$LOG_FILE"
+
+    chroot "$ROOT" /bin/sh -c "apt-get install libgl1-nvidia-glx:i386 nvidia-vdpau-driver:i386 --yes" >> "$LOG_FILE" 2>&1
 }
 
 remount_root () {
@@ -306,7 +315,10 @@ dev_tools () {
 }
 
 testing () {
-    chroot "$ROOT" /bin/sh -c "apt-get install libgl1-nvidia-glx:i386 nvidia-vdpau-driver:i386 --yes" >> "$LOG_FILE" 2>&1
+    echo "=== Installing SteamOS"
+    echo "=== Installing SteamOS" >> "$LOG_FILE"
+
+    chroot "$ROOT" /bin/sh -c "apt-get install apt-get install steam-launcher steamos-base-files steamos-modeswitch-inhibitor steamos-autoupdate --yes" >> "$LOG_FILE" 2>&1
 }
 
 main () {
@@ -319,10 +331,10 @@ main () {
     dev_tools # for testing only
     setup_preseed
     # configure_base
-    ## pre_download
     # kernel_install
-    desktop_install
-    # testing
+    ## pre_download
+    # desktop_install
+    testing
 }
 
 main ${1+"$@"}
