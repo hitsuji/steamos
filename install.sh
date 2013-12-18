@@ -5,8 +5,20 @@
 #LOG_FILE="./install-$(date "+%y-%m-%d--%H-%M-%S").log"
 LOG_FILE="./install.log"
 
-echo "SteamOS Deboostrap Install" > "$LOG_FILE" 2>&1
-echo "" >> "$LOG_FILE" 2>&1
+APT_VALVE_REPO="valve-archive-keyring steamos-beta-repo"
+APT_LOCALES="locales locales-all"
+APT_CONSOLE="console-setup"
+APT_BASE_UTILS="acpi acpi-support-base acpid laptop-detect discover pciutils usbutils openssh-client openssh-server bash-completion command-not-found"
+APT_KERNEL="linux-image-amd64 firmware-linux-free firmware-linux-nonfree firmware-realtek firmware-ralink firmware-linux"
+APT_GRUB_EFI="grub-efi-amd64"
+APT_PLYMOUTH="plymouth plymouth-drm plymouth-themes-steamos"
+APT_DESKTOP="task-desktop valve-wallpapers lightdm"
+APT_STEAM="libc6:i386 libgl1-mesa-dri:i386 libgl1-mesa-glx:i386 steamos-modeswitch-inhibitor:i386 steam:i386 libtxc-dxtn-s2tc0:i386 libgl1-fglrx-glx:i386"
+APT_NVIDIA="libgl1-nvidia-glx:i386 nvidia-vdpau-driver:i386"
+APT_STEAMOS="steamos-base-files steamos-modeswitch-inhibitor steamos-autoupdate" #steam-launcher
+
+
+
 
 ################################################################################
 # Tests ########################################################################
@@ -100,6 +112,11 @@ test_debootstrap () {
 # Heplers ######################################################################
 ################################################################################
 
+begin_logging () {
+    echo "SteamOS Deboostrap Install" > "$LOG_FILE" 2>&1
+    echo "" >> "$LOG_FILE" 2>&1
+}
+
 get_filesystem_details () {
     TARGET_UUID="$(blkid | grep "$TARGET" | awk '{ len=length($2) - 7; print substr($2, 7, len) }')"
     EFI_UUID="$(blkid | grep "$EFI" | awk '{ len=length($2) - 7; print substr($2, 7, len) }')"
@@ -108,6 +125,10 @@ get_filesystem_details () {
     TARGET_TYPE="$(blkid | grep "$TARGET" | awk '{ len=length($3) - 7; print substr($3, 7, len) }')"
     EFI_TYPE="$(blkid | grep "$EFI" | awk '{ len=length($3) - 7; print substr($3, 7, len) }')"
     SWAP_TYPE="$(blkid | grep "$SWAP" | awk '{ len=length($3) - 7; print substr($3, 7, len) }')"
+}
+
+chroot_install () {
+    chroot "$ROOT" /bin/sh -c "apt-get install $1 --yes" >> "$LOG_FILE" 2>&1
 }
 
 ################################################################################
@@ -221,36 +242,53 @@ EOF
     echo "=== Configuring Base System"
     echo "=== Configuring Base System" >> "$LOG_FILE"
 
+    chroot "$ROOT" /bin/sh -c "dpkg --add-architecture i386" >> "$LOG_FILE" 2>&1
     chroot "$ROOT" /bin/sh -c "apt-get update" >> "$LOG_FILE" 2>&1
-    chroot "$ROOT" /bin/sh -c "apt-get install valve-archive-keyring steamos-beta-repo --force-yes --allow-unauthenticated" >> "$LOG_FILE" 2>&1
+    # chroot "$ROOT" /bin/sh -c "apt-get install $APT_VALVE_REPO --force-yes --allow-unauthenticated" >> "$LOG_FILE" 2>&1
+    chroot_install "$APT_VALVE_REPO --force-yes --allow-unauthenticated"
     chroot "$ROOT" /bin/sh -c "apt-get update && apt-get upgrade --force-yes --allow-unauthenticated" >> "$LOG_FILE" 2>&1
 
-    chroot "$ROOT" /bin/sh -c "apt-get install locales locales-all --yes" >> "$LOG_FILE" 2>&1
+    # chroot "$ROOT" /bin/sh -c "apt-get install $APT_LOCALES --yes" >> "$LOG_FILE" 2>&1
+    chroot_install "$APT_LOCALES"
 
     chroot "$ROOT" /bin/sh -c "update-locale $LOCALE"
 
-    chroot "$ROOT" /bin/sh -c "apt-get install console-setup --yes" >> "$LOG_FILE" 2>&1
+    # chroot "$ROOT" /bin/sh -c "apt-get install $APT_CONSOLE --yes" >> "$LOG_FILE" 2>&1
+    chroot_install "$APT_CONSOLE"
 
     echo "$TIMEZONE" > "$ROOT/etc/timezone"
     chroot "$ROOT" /bin/sh -c "dpkg-reconfigure -f noninteractive tzdata" >> "$LOG_FILE" 2>&1
 
-    chroot "$ROOT" /bin/sh -c "apt-get install acpi acpi-support-base acpid laptop-detect discover pciutils usbutils openssh-client openssh-server bash-completion command-not-found --yes" >> "$LOG_FILE" 2>&1
+    # chroot "$ROOT" /bin/sh -c "apt-get install $APT_BASE_UTILS --yes" >> "$LOG_FILE" 2>&1
+    chroot_install "$APT_BASE_UTILS"
+}
+
+pre_download () {
+    echo "=== Downloading Packages"
+    echo "=== Downloading Packages" >> "$LOG_FILE"
+
+    chroot_install "$APT_KERNEL $APT_GRUB_EFI $APT_PLYMOUTH $APT_DESKTOP $APT_STEAM $APT_NVIDIA $APT_STEAMOS --download-only"
 }
 
 kernel_install () {
     echo "=== Installing Kernel"
     echo "=== Installing Kernel" >> "$LOG_FILE"
-    chroot "$ROOT" /bin/sh -c "apt-get install linux-image-amd64 firmware-linux-free firmware-linux-nonfree firmware-realtek firmware-ralink firmware-linux --yes" >> "$LOG_FILE" 2>&1
+
+    # chroot "$ROOT" /bin/sh -c "apt-get install $APT_KERNEL --yes" >> "$LOG_FILE" 2>&1
+    chroot_install "$APT_KERNEL"
 
     echo "=== Installing GRUB"
     echo "=== Installing GRUB" >> "$LOG_FILE"
-    chroot "$ROOT" /bin/sh -c "apt-get install grub-efi-amd64 --yes" >> "$LOG_FILE" 2>&1
+
+    # chroot "$ROOT" /bin/sh -c "apt-get install $APT_GRUB_EFI --yes" >> "$LOG_FILE" 2>&1
+    chroot_install "$APT_GRUB_EFI"
 
     echo "grub"
 
     echo "=== Installing PLYMOUTH"
     echo "=== Installing PLYMOUTH" >> "$LOG_FILE"
-    chroot "$ROOT" /bin/sh -c "apt-get install plymouth plymouth-drm plymouth-themes-steamos --yes" >> "$LOG_FILE" 2>&1
+    # chroot "$ROOT" /bin/sh -c "apt-get install $APT_PLYMOUTH --yes" >> "$LOG_FILE" 2>&1
+    chroot_install "$APT_PLYMOUTH"
 
     chroot "$ROOT" /bin/sh -c "plymouth-set-default-theme -R steamos" >> "$LOG_FILE" 2>&1
     sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*$/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/' "$ROOT/etc/default/grub"
@@ -275,31 +313,32 @@ EOF
 
 }
 
-pre_download () {
-    echo "=== Downloading Packages"
-    echo "=== Downloading Packages" >> "$LOG_FILE"
-}
-
 desktop_install () {
     echo "=== Installing the Desktop"
     echo "=== Installing the Desktop" >> "$LOG_FILE"
 
-    chroot "$ROOT" /bin/sh -c "apt-get install task-desktop valve-wallpapers lightdm --yes" >> "$LOG_FILE" 2>&1
+    # chroot "$ROOT" /bin/sh -c "apt-get install $APT_DESKTOP --yes" >> "$LOG_FILE" 2>&1
+    chroot_install "$APT_DESKTOP"
     echo "/usr/sbin/lightdm" > "$ROOT/etc/X11/default-display-manager"
 
     echo "=== Installing Steam"
     echo "=== Installing Steam" >> "$LOG_FILE"
 
-    chroot "$ROOT" /bin/sh -c "dpkg --add-architecture i386" >> "$LOG_FILE" 2>&1
-    chroot "$ROOT" /bin/sh -c "apt-get update" >> "$LOG_FILE" 2>&1
-    chroot "$ROOT" /bin/sh -c "apt-get install libc6:i386 libgl1-mesa-dri:i386 libgl1-mesa-glx:i386 steamos-modeswitch-inhibitor:i386 steam:i386 libtxc-dxtn-s2tc0:i386 libgl1-fglrx-glx:i386 --yes" >> "$LOG_FILE" 2>&1
+   # chroot "$ROOT" /bin/sh -c "apt-get install $APT_STEAM --yes" >> "$LOG_FILE" 2>&1
+    chroot_install "$APT_STEAM"
 
     # TODO: Make optional
     echo "=== Installing nVidia Drivers"
     echo "=== Installing nVidia Drivers" >> "$LOG_FILE"
 
-    chroot "$ROOT" /bin/sh -c "apt-get install libgl1-nvidia-glx:i386 nvidia-vdpau-driver:i386 --yes" >> "$LOG_FILE" 2>&1
-}
+    # chroot "$ROOT" /bin/sh -c "apt-get install $APT_NVIDIA --yes" >> "$LOG_FILE" 2>&1
+    chroot_install "$APT_NVIDIA"
+
+    echo "=== Installing SteamOS"
+    echo "=== Installing SteamOS" >> "$LOG_FILE"
+
+    #chroot "$ROOT" /bin/sh -c "apt-get install $APT_STEAMOS --yes" >> "$LOG_FILE" 2>&1
+    chroot_install "$APT_STEAMOS"}
 
 remount_root () {
     get_filesystem_details
@@ -311,29 +350,24 @@ remount_root () {
 }
 
 dev_tools () {
-    chroot "$ROOT" /bin/sh -c "apt-get install debconf-utils pastebinit --yes" >> "$LOG_FILE" 2>&1
-}
-
-testing () {
-    echo "=== Installing SteamOS"
-    echo "=== Installing SteamOS" >> "$LOG_FILE"
-
-    chroot "$ROOT" /bin/sh -c "apt-get install apt-get install steam-launcher steamos-base-files steamos-modeswitch-inhibitor steamos-autoupdate --yes" >> "$LOG_FILE" 2>&1
+    chroot_install "debconf-utils pastebinit"
+    # chroot "$ROOT" /bin/sh -c "apt-get install debconf-utils pastebinit --yes" >> "$LOG_FILE" 2>&1
 }
 
 main () {
     # todo: test if sudo
+    begin_logging
     # todo: default_config + current config
-    # test_config
-    # debootstrap_install
-    remount_root # for testing only
+    test_config
+    debootstrap_install
+    # remount_root # for testing only
     prepare_chroot
-    dev_tools # for testing only
     setup_preseed
-    # configure_base
-    # kernel_install
-    ## pre_download
-    # desktop_install
+    configure_base
+    dev_tools # for testing only
+    kernel_install
+    pre_download
+    desktop_install
     testing
 }
 
