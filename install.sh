@@ -338,7 +338,8 @@ desktop_install () {
     echo "=== Installing SteamOS" >> "$LOG_FILE"
 
     #chroot "$ROOT" /bin/sh -c "apt-get install $APT_STEAMOS --yes" >> "$LOG_FILE" 2>&1
-    chroot_install "$APT_STEAMOS"}
+    chroot_install "$APT_STEAMOS"
+}
 
 remount_root () {
     get_filesystem_details
