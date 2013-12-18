@@ -159,6 +159,11 @@ prepare_chroot () {
     mount -t proc none "$ROOT/proc" >> "$LOG_FILE" 2>&1
 }
 
+setup_preseed () {
+    cp "preseed" "$ROOT/root/preseed"
+    chroot "$ROOT" /bin/sh -c "debconf-set-selections root/preseed" >> "$LOG_FILE" 2>&1
+}
+
 configure_base () {
     chroot "$ROOT" /bin/sh -c "cat /proc/mounts > /etc/mtab"
 
@@ -218,14 +223,6 @@ EOF
     chroot "$ROOT" /bin/sh -c "apt-get install locales locales-all --yes" >> "$LOG_FILE" 2>&1
 
     chroot "$ROOT" /bin/sh -c "update-locale $LOCALE"
-
-    ## TODO: apt-get install console-setup
-    cat - > "$ROOT/etc/default/keyboard" << EOF
-XKBMODEL="$XKBMODEL"
-XKBLAYOUT="$XKBLAYOUT"
-XKBVARIANT="$XKBVARIANT"
-XKBOPTIONS="$XKBOPTIONS"
-EOF
 
     chroot "$ROOT" /bin/sh -c "apt-get install console-setup --yes" >> "$LOG_FILE" 2>&1
 
@@ -296,6 +293,7 @@ main () {
     # debootstrap_install
     remount_root # for testing only
     prepare_chroot
+    setup_preseed
     configure_base
     # kernel_install
     # desktop_install
