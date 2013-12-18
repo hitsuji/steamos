@@ -1,0 +1,21 @@
+#!/bin/sh
+
+TARGET="/dev/sda4"
+EFI="/dev/sda1"
+SWAP="/dev/sda2"
+
+ROOT="/mnt/steamos"
+
+DNS1="8.8.8.8"
+DNS2="8.8.4.4"
+DNS3=
+
+LOCALE="LANG=en_US.UTF-8 LANGUAGE=en_US:en"
+TIMEZONE="Etc/UTC"
+
+HOSTNAME="steamos"
+
+XKBMODEL="pc105"
+XKBLAYOUT="ie"
+XKBVARIANT=""
+XKBOPTIONS=""
