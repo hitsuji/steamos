@@ -279,7 +279,8 @@ desktop_install () {
     echo "=== Installing the Desktop"
     echo "=== Installing the Desktop" >> "$LOG_FILE"
 
-    chroot "$ROOT" /bin/sh -c "apt-get install task-desktop valve-wallpapers --yes" >> "$LOG_FILE" 2>&1
+    chroot "$ROOT" /bin/sh -c "apt-get install task-desktop valve-wallpapers lightdm --yes" >> "$LOG_FILE" 2>&1
+    echo "/usr/sbin/lightdm" > "$ROOT/etc/X11/default-display-manager"
 }
 
 remount_root () {
@@ -292,12 +293,12 @@ remount_root () {
 }
 
 testing () {
-    echo "=== Installing Lightdm"
-    echo "=== Installing Lightdm" >> "$LOG_FILE"
+    echo "=== Installing Steam"
+    echo "=== Installing Steam" >> "$LOG_FILE"
 
-    echo "/usr/sbin/lightdm" > "$ROOT/etc/X11/default-display-manager"
-
-    chroot "$ROOT" /bin/sh -c "apt-get install lightdm --yes" >> "$LOG_FILE" 2>&1
+    chroot "$ROOT" /bin/sh -c "dpkg --add-architecture i386" >> "$LOG_FILE" 2>&1
+    chroot "$ROOT" /bin/sh -c "apt-get update" >> "$LOG_FILE" 2>&1
+    chroot "$ROOT" /bin/sh -c "apt-get install libc6:i386 libgl1-mesa-dri:i386 libgl1-mesa-glx:i386 libgl1-nvidia-glx:i386 steamos-modeswitch-inhibitor:i386 steam:i386 nvidia-vdpau-driver:i386 libtxc-dxtn-s2tc0:i386 libgl1-fglrx-glx:i386" >> "$LOG_FILE" 2>&1
 }
 
 main () {
