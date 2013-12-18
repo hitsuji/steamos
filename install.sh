@@ -161,7 +161,12 @@ prepare_chroot () {
 
 setup_preseed () {
     cp "preseed" "$ROOT/root/preseed"
+    cp "hacks" "$ROOT/root/hacks"
+
+    chmod +x "$ROOT/root/hacks"
+
     chroot "$ROOT" /bin/sh -c "debconf-set-selections root/preseed" >> "$LOG_FILE" 2>&1
+    chroot "$ROOT" /bin/sh -c "/root/hacks" >> "$LOG_FILE" 2>&1
 }
 
 configure_base () {
