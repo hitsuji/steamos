@@ -16,4 +16,6 @@ keyboard-configuration keyboard-configuration/unsupported_options boolean true
 keyboard-configuration keyboard-configuration/store_defaults_in_debconf_db boolean true
 keyboard-configuration keyboard-configuration/altgr select The default for the keyboard layout
 keyboard-configuration keyboard-configuration/optionscode string
+lightdm lightdm/daemon_name string /usr/sbin/lightdm
+gdm3 shared/default-x-display-manager select lightdm
 lightdm shared/default-x-display-manager select lightdm

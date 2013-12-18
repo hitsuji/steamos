@@ -290,6 +290,8 @@ testing () {
     echo "=== Installing Lightdm"
     echo "=== Installing Lightdm" >> "$LOG_FILE"
 
+    echo "/usr/sbin/lightdm" > "$ROOT/etc/X11/default-display-manager"
+
     chroot "$ROOT" /bin/sh -c "apt-get install lightdm --yes" >> "$LOG_FILE" 2>&1
 }
 
