@@ -15,7 +15,5 @@ TIMEZONE="Etc/UTC"
 
 HOSTNAME="steamos"
 
-XKBMODEL="pc105"
-XKBLAYOUT="ie"
-XKBVARIANT=""
-XKBOPTIONS=""
+USERNAME="hitsuji"
+PASSWORD="hitsuji"

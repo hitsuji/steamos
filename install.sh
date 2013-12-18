@@ -298,7 +298,11 @@ testing () {
 
     chroot "$ROOT" /bin/sh -c "dpkg --add-architecture i386" >> "$LOG_FILE" 2>&1
     chroot "$ROOT" /bin/sh -c "apt-get update" >> "$LOG_FILE" 2>&1
-    chroot "$ROOT" /bin/sh -c "apt-get install libc6:i386 libgl1-mesa-dri:i386 libgl1-mesa-glx:i386 libgl1-nvidia-glx:i386 steamos-modeswitch-inhibitor:i386 steam:i386 nvidia-vdpau-driver:i386 libtxc-dxtn-s2tc0:i386 libgl1-fglrx-glx:i386 --yes" >> "$LOG_FILE" 2>&1
+    chroot "$ROOT" /bin/sh -c "apt-get install libc6:i386 libgl1-mesa-dri:i386 libgl1-mesa-glx:i386 steamos-modeswitch-inhibitor:i386 steam:i386 libtxc-dxtn-s2tc0:i386 libgl1-fglrx-glx:i386 --yes" >> "$LOG_FILE" 2>&1
+}
+
+testing2 () {
+    chroot "$ROOT" /bin/sh -c "apt-get install libgl1-nvidia-glx:i386 nvidia-vdpau-driver:i386 --yes" >> "$LOG_FILE" 2>&1
 }
 
 main () {
@@ -313,6 +317,7 @@ main () {
     # kernel_install
     # desktop_install
     testing
+    testing2
 }
 
 main ${1+"$@"}
