@@ -295,8 +295,8 @@ main () {
     prepare_chroot
     setup_preseed
     # configure_base
-    kernel_install
-    # desktop_install
+    # kernel_install
+    desktop_install
 }
 
 main ${1+"$@"}
