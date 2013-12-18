@@ -294,8 +294,8 @@ main () {
     remount_root # for testing only
     prepare_chroot
     setup_preseed
-    configure_base
-    # kernel_install
+    # configure_base
+    kernel_install
     # desktop_install
 }
 
