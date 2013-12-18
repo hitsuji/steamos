@@ -151,6 +151,8 @@ prepare_chroot () {
 
     mkdir -p "$ROOT/boot/efi" >> "$LOG_FILE" 2>&1
 
+    mount "$EFI" "$ROOT/boot/efi" >> "$LOG_FILE" 2>&1
+
     mount --bind /dev "$ROOT/dev" >> "$LOG_FILE" 2>&1
     mount --bind /sys "$ROOT/sys" >> "$LOG_FILE" 2>&1
     mount --bind /dev/pts "$ROOT/dev/pts" >> "$LOG_FILE" 2>&1
@@ -278,14 +280,25 @@ desktop_install () {
     chroot "$ROOT" /bin/sh -c "apt-get install task-desktop valve-wallpapers --yes" >> "$LOG_FILE" 2>&1
 }
 
+remount_root () {
+    get_filesystem_details
+
+    echo "=== Mounting $TARGET"
+    echo "=== Mounting $TARGET" >> "$LOG_FILE"
+
+    mount "$TARGET" "$ROOT" >> "$LOG_FILE" 2>&1
+}
+
 main () {
     # todo: test if sudo
+    # todo: default_config + current config
     # test_config
     # debootstrap_install
-    # prepare_chroot
+    remount_root # for testing only
+    prepare_chroot
     # configure_base
     # kernel_install
-    desktop_install
+    # desktop_install
 }
 
 main ${1+"$@"}
