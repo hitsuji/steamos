@@ -286,6 +286,13 @@ remount_root () {
     mount "$TARGET" "$ROOT" >> "$LOG_FILE" 2>&1
 }
 
+testing () {
+    echo "=== Installing Lightdm"
+    echo "=== Installing Lightdm" >> "$LOG_FILE"
+
+    chroot "$ROOT" /bin/sh -c "apt-get install lightdm --yes" >> "$LOG_FILE" 2>&1
+}
+
 main () {
     # todo: test if sudo
     # todo: default_config + current config
@@ -296,7 +303,8 @@ main () {
     setup_preseed
     # configure_base
     # kernel_install
-    desktop_install
+    # desktop_install
+    testing
 }
 
 main ${1+"$@"}
