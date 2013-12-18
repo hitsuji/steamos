@@ -237,6 +237,8 @@ EOF
     chroot "$ROOT" /bin/sh -c "apt-get install acpi acpi-support-base acpid laptop-detect discover pciutils usbutils openssh-client openssh-server --yes" >> "$LOG_FILE" 2>&1
 }
 
+# pre_download () {}
+
 kernel_install () {
     echo "=== Installing Kernel"
     echo "=== Installing Kernel" >> "$LOG_FILE"
@@ -281,6 +283,13 @@ desktop_install () {
 
     chroot "$ROOT" /bin/sh -c "apt-get install task-desktop valve-wallpapers lightdm --yes" >> "$LOG_FILE" 2>&1
     echo "/usr/sbin/lightdm" > "$ROOT/etc/X11/default-display-manager"
+
+    echo "=== Installing Steam"
+    echo "=== Installing Steam" >> "$LOG_FILE"
+
+    chroot "$ROOT" /bin/sh -c "dpkg --add-architecture i386" >> "$LOG_FILE" 2>&1
+    chroot "$ROOT" /bin/sh -c "apt-get update" >> "$LOG_FILE" 2>&1
+    chroot "$ROOT" /bin/sh -c "apt-get install libc6:i386 libgl1-mesa-dri:i386 libgl1-mesa-glx:i386 steamos-modeswitch-inhibitor:i386 steam:i386 libtxc-dxtn-s2tc0:i386 libgl1-fglrx-glx:i386 --yes" >> "$LOG_FILE" 2>&1
 }
 
 remount_root () {
@@ -292,16 +301,11 @@ remount_root () {
     mount "$TARGET" "$ROOT" >> "$LOG_FILE" 2>&1
 }
 
-testing () {
-    echo "=== Installing Steam"
-    echo "=== Installing Steam" >> "$LOG_FILE"
-
-    chroot "$ROOT" /bin/sh -c "dpkg --add-architecture i386" >> "$LOG_FILE" 2>&1
-    chroot "$ROOT" /bin/sh -c "apt-get update" >> "$LOG_FILE" 2>&1
-    chroot "$ROOT" /bin/sh -c "apt-get install libc6:i386 libgl1-mesa-dri:i386 libgl1-mesa-glx:i386 steamos-modeswitch-inhibitor:i386 steam:i386 libtxc-dxtn-s2tc0:i386 libgl1-fglrx-glx:i386 --yes" >> "$LOG_FILE" 2>&1
+dev_tools () {
+    chroot "$ROOT" /bin/sh -c "apt-get install debconf-utils pastebinit --yes" >> "$LOG_FILE" 2>&1
 }
 
-testing2 () {
+testing () {
     chroot "$ROOT" /bin/sh -c "apt-get install libgl1-nvidia-glx:i386 nvidia-vdpau-driver:i386 --yes" >> "$LOG_FILE" 2>&1
 }
 
@@ -312,12 +316,13 @@ main () {
     # debootstrap_install
     remount_root # for testing only
     prepare_chroot
+    dev_tools # for testing only
     setup_preseed
     # configure_base
+    ## pre_download
     # kernel_install
-    # desktop_install
-    testing
-    testing2
+    desktop_install
+    # testing
 }
 
 main ${1+"$@"}

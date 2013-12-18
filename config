@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# currently just UEFI supported
+GRUB="UEFI" # valid options are "UEFI" or "BIOS"
+
 TARGET="/dev/sda4"
 EFI="/dev/sda1"
 SWAP="/dev/sda2"

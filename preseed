@@ -19,3 +19,4 @@ keyboard-configuration keyboard-configuration/optionscode string
 lightdm lightdm/daemon_name string /usr/sbin/lightdm
 gdm3 shared/default-x-display-manager select lightdm
 lightdm shared/default-x-display-manager select lightdm
+nvidia-support nvidia-support/needs-xorg-conf-to-enable note
