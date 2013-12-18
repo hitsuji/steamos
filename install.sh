@@ -296,7 +296,7 @@ main () {
     # debootstrap_install
     remount_root # for testing only
     prepare_chroot
-    # configure_base
+    configure_base
     # kernel_install
     # desktop_install
 }
