@@ -49,7 +49,7 @@ test_config () {
         stderr "GRUB option not set"
     fi
 
-    if ! ([ "$GRUB" = "BIOS" ] || [ "$GRUB" == "UEFI" ]); then
+    if ! ([ "$GRUB" = "BIOS" ] || [ "$GRUB" = "UEFI" ]); then
         stderr "GRUB option must be either BIOS or UEFI"
         exit 1
     fi
@@ -183,7 +183,7 @@ get_filesystem_details () {
         EFI_TYPE="$(blkid | grep "$EFI" | awk '{ len=length($3) - 7; print substr($3, 7, len) }')"
     fi
 
-    if [ ! -z $HOME ]; then
+    if [ ! -z "$HOME" ]; then
         HOME_UUID="$(blkid | grep "$HOME" | awk '{ len=length($2) - 7; print substr($2, 7, len) }')"
         HOME_TYPE="$(blkid | grep "$HOME" | awk '{ len=length($3) - 7; print substr($3, 7, len) }')"
     fi
@@ -493,6 +493,7 @@ main () {
             setup_preseed
             testing
         ;;
+    esac
 }
 
-main ${1+"$@"}
+main "${1+"$@"}"
