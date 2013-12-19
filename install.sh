@@ -353,7 +353,7 @@ EOF
 pre_download () {
     stdout "=== Downloading Packages"
 
-    chroot_install "$APT_KERNEL $APT_GRUB_EFI $APT_GRUB_BIOS $APT_PLYMOUTH $APT_DESKTOP $APT_STEAM $APT_NVIDIA $APT_STEAMOS --download-only"
+    chroot_install "$APT_KERNEL $APT_PLYMOUTH $APT_DESKTOP $APT_STEAM $APT_NVIDIA $APT_STEAMOS --download-only"
 }
 
 kernel_install () {
