@@ -2,7 +2,7 @@
 
 . /usr/share/debconf/confmodule
 
-# prevent lightdm postinst from forcing the display-manager dialog
+# prevent lightdm config from forcing the display-manager dialog
 OWNERS=
 if db_metaget shared/default-x-display-manager owners; then
   OWNERS="$RET"

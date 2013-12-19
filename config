@@ -1,22 +1,19 @@
 #!/bin/sh
 
-# currently just UEFI supported
-GRUB="UEFI" # valid options are "UEFI" or "BIOS"
+## valid options are "UEFI" or "BIOS"
+GRUB="UEFI"
 
 TARGET="/dev/sda4"
 EFI="/dev/sda1"
 SWAP="/dev/sda2"
 
+#GRUB="BIOS"
+
+#TARGET="/dev/sda3"
+#SWAP="/dev/sda1"
+#HOME="/dev/sda4"
+
 ROOT="/mnt/steamos"
-
-DNS1="8.8.8.8"
-DNS2="8.8.4.4"
-DNS3=
-
-LOCALE="LANG=en_US.UTF-8 LANGUAGE=en_US:en"
-TIMEZONE="Etc/UTC"
-
-HOSTNAME="steamos"
 
 USERNAME="hitsuji"
 PASSWORD="hitsuji"

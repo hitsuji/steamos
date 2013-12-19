@@ -1,71 +1,122 @@
 #!/bin/sh
 
+## Include user configuration
+GRUB=
+TARGET=
+HOME=
+EFI=
+MBR=
+SWAP=
+ROOT=
+SKIP_NVIDIA=
+DNS1="8.8.8.8" ## default to google
+DNS2="8.8.4.4" ## default to google
+DNS3=
+LOCALE="LANG=en_US.UTF-8 LANGUAGE=en_US:en" ## default to US
+TIMEZONE="Etc/UTC"                          ## default to UTC
+HOSTNAME="steamos"                          ## default to steamos
+USERNAME=
+PASSWORD=
+
 . ./config
 
-#LOG_FILE="./install-$(date "+%y-%m-%d--%H-%M-%S").log"
 LOG_FILE="./install.log"
+#LOG_FILE="./install-$(date "+%y-%m-%d--%H-%M-%S").log"
 
+
+## List of packages selected in apt
 APT_VALVE_REPO="valve-archive-keyring steamos-beta-repo"
 APT_LOCALES="locales locales-all"
 APT_CONSOLE="console-setup"
 APT_BASE_UTILS="acpi acpi-support-base acpid laptop-detect discover pciutils usbutils openssh-client openssh-server bash-completion command-not-found"
 APT_KERNEL="linux-image-amd64 firmware-linux-free firmware-linux-nonfree firmware-realtek firmware-ralink firmware-linux"
 APT_GRUB_EFI="grub-efi-amd64"
+APT_GRUB_BIOS="grub-pc"
 APT_PLYMOUTH="plymouth plymouth-drm plymouth-themes-steamos"
 APT_DESKTOP="task-desktop valve-wallpapers lightdm"
 APT_STEAM="libc6:i386 libgl1-mesa-dri:i386 libgl1-mesa-glx:i386 steamos-modeswitch-inhibitor:i386 steam:i386 libtxc-dxtn-s2tc0:i386 libgl1-fglrx-glx:i386"
 APT_NVIDIA="libgl1-nvidia-glx:i386 nvidia-vdpau-driver:i386"
-APT_STEAMOS="steamos-base-files steamos-modeswitch-inhibitor steamos-autoupdate" #steam-launcher
-
-
+APT_STEAMOS="steamos-base-files steamos-modeswitch-inhibitor steamos-autoupdate" ##steam-launcher
 
 
 ################################################################################
-# Tests ########################################################################
+## Tests #######################################################################
 ################################################################################
 
 test_config () {
+    ## GRUB
+    if [ -z "$GRUB" ]; then
+        stderr "GRUB option not set"
+    fi
+
+    if ! ([ "$GRUB" = "BIOS" ] || [ "$GRUB" == "UEFI" ]); then
+        stderr "GRUB option must be either BIOS or UEFI"
+        exit 1
+    fi
+
+    ## TARGET
     if [ -z "$TARGET" ]; then
-        echo "TARGET not specified" 1>&2
-        echo "TARGET not specified" >> "$LOG_FILE" 2>&1
+        stderr "TARGET option not set"
         exit 1
     fi
 
-    if [ -z "$EFI" ]; then
-        echo "EFI not specified" 1>&2
-        echo "EFI not specified" >> "$LOG_FILE" 2>&1
-        exit 1
-    fi
-
-    if [ -z "$SWAP" ]; then
-        echo "SWAP not specified" 1>&2
-        echo "SWAP not specified" >> "$LOG_FILE" 2>&1
-        exit 1
-    fi
-
-    if [ -z "$ROOT" ]; then
-        echo "ROOT not specified" 1>&2
-        echo "ROOT not specified" >> "$LOG_FILE" 2>&1
-        exit 1
-    fi
-}
-
-test_block_devices () {
     if [ ! -b "$TARGET" ]; then
-        echo "TARGET is not a valid block device" 1>&2
-        echo "TARGET is not a valid block device" >> "$LOG_FILE" 2>&1
+        stderr "TARGET is not a valid block device"
         exit 1
     fi
 
-    if [ ! -b "$EFI" ]; then
-        echo "EFI is not a valid block device" 1>&2
-        echo "EFI is not a valid block device" >> "$LOG_FILE" 2>&1
+    if [ "$GRUB" = "UEFI" ]; then
+        ## EFI
+        if [ -z "$EFI" ]; then
+            stderr "EFI option not set"
+            exit 1
+        fi
+
+        if [ ! -b "$EFI" ]; then
+            stderr "EFI is not a valid block device"
+            exit 1
+        fi
+    fi
+
+    if [ "$GRUB" = "BIOS" ]; then
+        ## MBR
+        if [ -z "$MBR" ]; then
+            stderr "MBR option not set"
+            exit 1
+        fi
+
+        if [ ! -b "$MBR" ]; then
+            stderr "MBR is not a valid block device"
+            exit 1
+        fi
+    fi
+
+    ## SWAP
+    if [ -z "$SWAP" ]; then
+        stderr "SWAP option not set"
         exit 1
     fi
 
     if [ ! -b "$SWAP" ]; then
-        echo "SWAP is not a valid block device" 1>&2
-        echo "SWAP is not a valid block device" >> "$LOG_FILE" 2>&1
+        stderr "SWAP is not a valid block device"
+        exit 1
+    fi
+
+    ## ROOT
+    if [ -z "$ROOT" ]; then
+        stderr "ROOT option not set"
+        exit 1
+    fi
+
+    ## USERNAME
+    if [ -z "$USERNAME" ]; then
+        stderr "USERNAME option not set"
+        exit 1
+    fi
+
+    ## PASSWORD
+    if [ -z "$PASSWORD" ]; then
+        stderr "PASSWORD option not set"
         exit 1
     fi
 }
@@ -73,15 +124,15 @@ test_block_devices () {
 test_filesystems_types () {
     get_filesystem_details
 
-    if [ "$EFI_TYPE" != "vfat" ]; then
-        echo "EFI is not a EFI System Partition" 1>&2
-        echo "EFI is not a EFI System Partition" >> "$LOG_FILE" 2>&1
-        exit 1
+    if [ "$GRUB" = "UEFI" ]; then
+        if [ "$EFI_TYPE" != "vfat" ]; then
+            stderr "EFI is not a EFI System Partition"
+            exit 1
+        fi
     fi
 
     if [ "$SWAP_TYPE" != "swap" ]; then
-        echo "SWAP is not a swap Partition" 1>&2
-        echo "SWAP is not a swap Partition" >> "$LOG_FILE" 2>&1
+        stderr "SWAP is not a swap Partition"
         exit 1
     fi
 }
@@ -90,20 +141,23 @@ test_debootstrap () {
     debootstrap --version > /dev/null 2>&1
 
     if [ $? -ne 0 ]; then
-        echo "SteamOS debootstrap not installed. Please install from" 1>&2
-        echo "http://repo.steampowered.com/steamos/pool/main/d/debootstrap/debootstrap_1.0.54.steamos+bsos6_all.deb" 1>&2
-        echo "SteamOS debootstrap not installed. Please install from" >> "$LOG_FILE" 2>&1
-        echo "http://repo.steampowered.com/steamos/pool/main/d/debootstrap/debootstrap_1.0.54.steamos+bsos6_all.deb" >> "$LOG_FILE" 2>&1
-        exit 1
+        stdout "=== Installing Debootstrap"
+
+        wget -O "/tmp/debootstrap.deb" "http://repo.steampowered.com/steamos/pool/main/d/debootstrap/debootstrap_1.0.54.steamos+bsos6_all.deb"  >> "$LOG_FILE" 2>&1
+        apt-get install "/tmp/debootstrap.deb"  >> "$LOG_FILE" 2>&1
+        rm -f "/tmp/debootstrap.deb"
     fi
 
     version="$(debootstrap --version)"
 
     if [ "${version#*steamos}" = "$version" ]; then
-        echo "Debootstrap must be installed from SteamOS repo. Please remove the current debootstrap and install from" 1>&2
-        echo "http://repo.steampowered.com/steamos/pool/main/d/debootstrap/debootstrap_1.0.54.steamos+bsos6_all.deb" 1>&2
-        echo "Debootstrap must be installed from SteamOS repo. Please remove the current debootstrap and install from" >> "$LOG_FILE" 2>&1
-        echo "http://repo.steampowered.com/steamos/pool/main/d/debootstrap/debootstrap_1.0.54.steamos+bsos6_all.deb" >> "$LOG_FILE" 2>&1
+        stdout "=== Replacing Debootstrap"
+
+        apt-get remove debootstrap
+
+        wget -O "/tmp/debootstrap.deb" "http://repo.steampowered.com/steamos/pool/main/d/debootstrap/debootstrap_1.0.54.steamos+bsos6_all.deb"  >> "$LOG_FILE" 2>&1
+        apt-get install "/tmp/debootstrap.deb"  >> "$LOG_FILE" 2>&1
+        rm -f "/tmp/debootstrap.deb"
         exit 1
     fi
 }
@@ -119,16 +173,51 @@ begin_logging () {
 
 get_filesystem_details () {
     TARGET_UUID="$(blkid | grep "$TARGET" | awk '{ len=length($2) - 7; print substr($2, 7, len) }')"
-    EFI_UUID="$(blkid | grep "$EFI" | awk '{ len=length($2) - 7; print substr($2, 7, len) }')"
     SWAP_UUID="$(blkid | grep "$SWAP" | awk '{ len=length($2) - 7; print substr($2, 7, len) }')"
 
     TARGET_TYPE="$(blkid | grep "$TARGET" | awk '{ len=length($3) - 7; print substr($3, 7, len) }')"
-    EFI_TYPE="$(blkid | grep "$EFI" | awk '{ len=length($3) - 7; print substr($3, 7, len) }')"
     SWAP_TYPE="$(blkid | grep "$SWAP" | awk '{ len=length($3) - 7; print substr($3, 7, len) }')"
+
+    if [ "$GRUB" = "UEFI" ]; then
+        EFI_UUID="$(blkid | grep "$EFI" | awk '{ len=length($2) - 7; print substr($2, 7, len) }')"
+        EFI_TYPE="$(blkid | grep "$EFI" | awk '{ len=length($3) - 7; print substr($3, 7, len) }')"
+    fi
+
+    if [ ! -z $HOME ]; then
+        HOME_UUID="$(blkid | grep "$HOME" | awk '{ len=length($2) - 7; print substr($2, 7, len) }')"
+        HOME_TYPE="$(blkid | grep "$HOME" | awk '{ len=length($3) - 7; print substr($3, 7, len) }')"
+    fi
 }
 
 chroot_install () {
     chroot "$ROOT" /bin/sh -c "apt-get install $1 --yes" >> "$LOG_FILE" 2>&1
+}
+
+stdout () {
+    echo "$1"
+    echo "$1" >> "$LOG_FILE"
+}
+
+stderr () {
+    echo "$1" 1>&2
+    echo "$1" >> "$LOG_FILE" 2>&1
+}
+
+remount_root () {
+    get_filesystem_details
+
+    stdout "=== Mounting $TARGET"
+
+    mount "$TARGET" "$ROOT" >> "$LOG_FILE" 2>&1
+
+    if [ ! -z "$HOME" ]; then
+        stdout "=== Mounting $HOME"
+        mount "$HOME" "$ROOT/home" >> "$LOG_FILE" 2>&1
+    fi
+}
+
+dev_tools () {
+    chroot_install "debconf-utils pastebinit"
 }
 
 ################################################################################
@@ -137,42 +226,48 @@ chroot_install () {
 
 debootstrap_install () {
     test_debootstrap
-    test_block_devices
     test_filesystems_types
 
-    echo "=== Formatting $TARGET"
-    echo "=== Formatting $TARGET" >> "$LOG_FILE"
+    stdout "=== Formatting $TARGET"
 
     mkfs.ext4 "$TARGET" >> "$LOG_FILE" 2>&1
+
+    if [ ! -z "$HOME" ]; then
+        stdout "=== Formatting $HOME"
+        mkfs.ext4 "$HOME" >> "$LOG)FILE" 2>&1
+    fi
 
     mkdir -p "$ROOT" >> "$LOG_FILE" 2>&1
 
     get_filesystem_details
 
-    echo "=== Mounting $TARGET"
-    echo "=== Mounting $TARGET" >> "$LOG_FILE"
+    stdout "=== Mounting $TARGET"
 
     mount "$TARGET" "$ROOT" >> "$LOG_FILE" 2>&1
 
-    echo "=== Installing base system"
-    echo "=== Installing base system" >> "$LOG_FILE"
+    if [ ! -z "$HOME" ]; then
+        stdout "=== Mounting $HOME"
+        mkdir "$ROOT/home" >> "$LOG_FILE" 2>&1
+        mount "$HOME" "$ROOT/home" >> "$LOG_FILE" 2>&1
+    fi
+
+    stdout "=== Installing base system"
 
     debootstrap --arch amd64 alchemist "$ROOT" http://repo.steampowered.com/steamos >> "$LOG_FILE" 2>&1
 
     if [ $? -ne 0 ]; then
-        echo "Error installing base system" 1>&2
-        echo "Error installing base system" >> "$LOG_FILE" 2>&1
+        stderr "stderr installing base system"
         exit 1
     fi
 }
 
 prepare_chroot () {
-    echo "=== Preparing Chroot"
-    echo "=== Preparing Chroot" >> "$LOG_FILE"
+    stdout "=== Preparing Chroot"
 
-    mkdir -p "$ROOT/boot/efi" >> "$LOG_FILE" 2>&1
-
-    mount "$EFI" "$ROOT/boot/efi" >> "$LOG_FILE" 2>&1
+    if [ "$GRUB" = "UEFI" ]; then
+        mkdir -p "$ROOT/boot/efi" >> "$LOG_FILE" 2>&1
+        mount "$EFI" "$ROOT/boot/efi" >> "$LOG_FILE" 2>&1
+    fi
 
     mount --bind /dev "$ROOT/dev" >> "$LOG_FILE" 2>&1
     mount --bind /sys "$ROOT/sys" >> "$LOG_FILE" 2>&1
@@ -193,8 +288,7 @@ setup_preseed () {
 configure_base () {
     chroot "$ROOT" /bin/sh -c "cat /proc/mounts > /etc/mtab"
 
-    echo "=== Configuring Apt"
-    echo "=== Configuring Apt" >> "$LOG_FILE"
+    stdout "=== Configuring Apt"
 
 ## Generate the sources.list
     cat - > "$ROOT/etc/apt/sources.list" << EOF
@@ -230,64 +324,54 @@ Pin: release l=Debian-Security
 Pin-Priority: 100
 EOF
 
-    echo "=== Configuring DNS"
-    echo "=== Configuring DNS" >> "$LOG_FILE"
+    stdout "=== Configuring DNS"
 
-    ## Configure DNS
     echo "" > "$ROOT/etc/resolv.conf"
     [ ! -z "$DNS1" ] && echo "nameserver $DNS1" >> "$ROOT/etc/resolv.conf"
     [ ! -z "$DNS2" ] && echo "nameserver $DNS2" >> "$ROOT/etc/resolv.conf"
     [ ! -z "$DNS3" ] && echo "nameserver $DNS3" >> "$ROOT/etc/resolv.conf"
 
-    echo "=== Configuring Base System"
-    echo "=== Configuring Base System" >> "$LOG_FILE"
+    stdout "=== Configuring Base System"
 
     chroot "$ROOT" /bin/sh -c "dpkg --add-architecture i386" >> "$LOG_FILE" 2>&1
     chroot "$ROOT" /bin/sh -c "apt-get update" >> "$LOG_FILE" 2>&1
-    # chroot "$ROOT" /bin/sh -c "apt-get install $APT_VALVE_REPO --force-yes --allow-unauthenticated" >> "$LOG_FILE" 2>&1
     chroot_install "$APT_VALVE_REPO --force-yes --allow-unauthenticated"
     chroot "$ROOT" /bin/sh -c "apt-get update && apt-get upgrade --force-yes --allow-unauthenticated" >> "$LOG_FILE" 2>&1
 
-    # chroot "$ROOT" /bin/sh -c "apt-get install $APT_LOCALES --yes" >> "$LOG_FILE" 2>&1
     chroot_install "$APT_LOCALES"
 
     chroot "$ROOT" /bin/sh -c "update-locale $LOCALE"
 
-    # chroot "$ROOT" /bin/sh -c "apt-get install $APT_CONSOLE --yes" >> "$LOG_FILE" 2>&1
     chroot_install "$APT_CONSOLE"
 
     echo "$TIMEZONE" > "$ROOT/etc/timezone"
     chroot "$ROOT" /bin/sh -c "dpkg-reconfigure -f noninteractive tzdata" >> "$LOG_FILE" 2>&1
 
-    # chroot "$ROOT" /bin/sh -c "apt-get install $APT_BASE_UTILS --yes" >> "$LOG_FILE" 2>&1
     chroot_install "$APT_BASE_UTILS"
 }
 
 pre_download () {
-    echo "=== Downloading Packages"
-    echo "=== Downloading Packages" >> "$LOG_FILE"
+    stdout "=== Downloading Packages"
 
-    chroot_install "$APT_KERNEL $APT_GRUB_EFI $APT_PLYMOUTH $APT_DESKTOP $APT_STEAM $APT_NVIDIA $APT_STEAMOS --download-only"
+    chroot_install "$APT_KERNEL $APT_GRUB_EFI $APT_GRUB_BIOS $APT_PLYMOUTH $APT_DESKTOP $APT_STEAM $APT_NVIDIA $APT_STEAMOS --download-only"
 }
 
 kernel_install () {
-    echo "=== Installing Kernel"
-    echo "=== Installing Kernel" >> "$LOG_FILE"
+    stdout "=== Installing Kernel"
 
-    # chroot "$ROOT" /bin/sh -c "apt-get install $APT_KERNEL --yes" >> "$LOG_FILE" 2>&1
     chroot_install "$APT_KERNEL"
 
-    echo "=== Installing GRUB"
-    echo "=== Installing GRUB" >> "$LOG_FILE"
+    stdout "=== Installing GRUB"
 
-    # chroot "$ROOT" /bin/sh -c "apt-get install $APT_GRUB_EFI --yes" >> "$LOG_FILE" 2>&1
-    chroot_install "$APT_GRUB_EFI"
+    if [ "$GRUB" = "UEFI" ]; then
+        chroot_install "$APT_GRUB_EFI"
+    elif [ "$GRUB" = "BIOS" ]; then
+        chroot_install "$API_GRUB_BIOS"
+    fi
 
-    echo "grub"
 
-    echo "=== Installing PLYMOUTH"
-    echo "=== Installing PLYMOUTH" >> "$LOG_FILE"
-    # chroot "$ROOT" /bin/sh -c "apt-get install $APT_PLYMOUTH --yes" >> "$LOG_FILE" 2>&1
+    stdout "=== Installing PLYMOUTH"
+
     chroot_install "$APT_PLYMOUTH"
 
     chroot "$ROOT" /bin/sh -c "plymouth-set-default-theme -R steamos" >> "$LOG_FILE" 2>&1
@@ -298,78 +382,117 @@ kernel_install () {
 
     chroot "$ROOT" /bin/sh -c "update-grub" >> "$LOG_FILE" 2>&1
 
-    echo "=== Configuring /etc/fstab"
-    echo "=== Configuring /etc/fstab" >> "$LOG_FILE"
+    if [ "$GRUB" = "UEFI" ]; then
+        chroot "$ROOT" /bin/sh -c "grub-install" >> "$LOG_FILE" 2>&1
+    elif [ "$GRUB" = "BIOS" ]; then
+        chroot "$ROOT" /bin/sh -c "grub-install $MBR" >> "$LOG_FILE" 2>&1
+    fi
 
-    cat - > "$ROOT/etc/fstab" << EOF
-UUID=$TARGET_UUID / $TARGET_TYPE errors=remount-ro 0 1
+    stdout "=== Configuring /etc/fstab"
+
+    if [ "$GRUB" = "UEFI" ] && [ -z "$HOME" ]; then
+
+        cat - > "$ROOT/etc/fstab" << EOF
+UUID=$TARGET_UUID / ext4 errors=remount-ro 0 1
 UUID=$EFI_UUID /boot/efi vfat defaults 0 2
 UUID=$SWAP_UUID none swap sw 0 0
 EOF
 
-    echo "$HOSTNAME" > "$ROOT/etc/hostname"
-    sed -i "1a\
-127.0.1.1 $HOSTNAME" "$ROOT/etc/hosts"
+    elif [ "$GRUB" = "UEFI" ] && [ -n "$HOME" ]; then
 
+        cat - > "$ROOT/etc/fstab" << EOF
+UUID=$TARGET_UUID / ext4 errors=remount-ro 0 1
+UUID=$EFI_UUID /boot/efi vfat defaults 0 2
+UUID=$HOME_UUID /home defaults 0 0
+UUID=$SWAP_UUID none swap sw 0 0
+EOF
+
+    elif [ "$GRUB" = "BIOS" ] && [ -z "$HOME" ]; then
+
+        cat - > "$ROOT/etc/fstab" << EOF
+UUID=$TARGET_UUID / ext4 errors=remount-ro 0 1
+UUID=$SWAP_UUID none swap sw 0 0
+EOF
+
+    elif [ "$GRUB" = "BIOS" ] && [ -n "$HOME" ]; then
+
+        cat - > "$ROOT/etc/fstab" << EOF
+UUID=$TARGET_UUID / ext4 errors=remount-ro 0 1
+UUID=$HOME_UUID /home defaults 0 0
+UUID=$SWAP_UUID none swap sw 0 0
+EOF
+
+    fi
+
+    echo "$HOSTNAME" > "$ROOT/etc/hostname"
+    echo "127.0.1.1 $HOSTNAME" >> "$ROOT/etc/hosts"
 }
 
 desktop_install () {
-    echo "=== Installing the Desktop"
-    echo "=== Installing the Desktop" >> "$LOG_FILE"
+    stdout "=== Installing the Desktop"
 
-    # chroot "$ROOT" /bin/sh -c "apt-get install $APT_DESKTOP --yes" >> "$LOG_FILE" 2>&1
     chroot_install "$APT_DESKTOP"
     echo "/usr/sbin/lightdm" > "$ROOT/etc/X11/default-display-manager"
 
-    echo "=== Installing Steam"
-    echo "=== Installing Steam" >> "$LOG_FILE"
+    stdout "=== Installing Steam"
 
-   # chroot "$ROOT" /bin/sh -c "apt-get install $APT_STEAM --yes" >> "$LOG_FILE" 2>&1
     chroot_install "$APT_STEAM"
 
-    # TODO: Make optional
-    echo "=== Installing nVidia Drivers"
-    echo "=== Installing nVidia Drivers" >> "$LOG_FILE"
+    if [ "$SKIP_NVIDIA" != "yes" ]; then
+        stdout "=== Installing nVidia Drivers"
+    fi
 
-    # chroot "$ROOT" /bin/sh -c "apt-get install $APT_NVIDIA --yes" >> "$LOG_FILE" 2>&1
     chroot_install "$APT_NVIDIA"
 
-    echo "=== Installing SteamOS"
-    echo "=== Installing SteamOS" >> "$LOG_FILE"
+    stdout "=== Installing SteamOS"
 
-    #chroot "$ROOT" /bin/sh -c "apt-get install $APT_STEAMOS --yes" >> "$LOG_FILE" 2>&1
     chroot_install "$APT_STEAMOS"
 }
 
-remount_root () {
-    get_filesystem_details
-
-    echo "=== Mounting $TARGET"
-    echo "=== Mounting $TARGET" >> "$LOG_FILE"
-
-    mount "$TARGET" "$ROOT" >> "$LOG_FILE" 2>&1
-}
-
-dev_tools () {
-    chroot_install "debconf-utils pastebinit"
-    # chroot "$ROOT" /bin/sh -c "apt-get install debconf-utils pastebinit --yes" >> "$LOG_FILE" 2>&1
-}
-
 main () {
-    # todo: test if sudo
-    begin_logging
-    # todo: default_config + current config
-    test_config
-    debootstrap_install
-    # remount_root # for testing only
-    prepare_chroot
-    setup_preseed
-    configure_base
-    dev_tools # for testing only
-    kernel_install
-    pre_download
-    desktop_install
-    testing
+    ## TODO: if sudo
+
+    case "$1" in
+        "all")
+            begin_logging
+            test_config
+            debootstrap_install
+            prepare_chroot
+            setup_preseed
+            configure_base
+            kernel_install
+            pre_download
+            desktop_install
+        ;;
+        "devall")
+            begin_logging
+            test_config
+            debootstrap_install
+            prepare_chroot
+            setup_preseed
+            configure_base
+            dev_tools
+            kernel_install
+            pre_download
+            desktop_install
+        ;;
+        "devbase")
+            begin_logging
+            test_config
+            debootstrap_install
+            prepare_chroot
+            setup_preseed
+            configure_base
+            dev_tools
+        ;;
+        "test")
+            begin_logging
+            test_config
+            remount_root
+            prepare_chroot
+            setup_preseed
+            testing
+        ;;
 }
 
 main ${1+"$@"}
