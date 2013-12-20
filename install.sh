@@ -335,8 +335,8 @@ EOF
 
     chroot "$ROOT" /bin/sh -c "dpkg --add-architecture i386" >> "$LOG_FILE" 2>&1
     chroot "$ROOT" /bin/sh -c "apt-get update" >> "$LOG_FILE" 2>&1
-    chroot_install "$APT_VALVE_REPO --force-yes --allow-unauthenticated"
-    chroot "$ROOT" /bin/sh -c "apt-get update && apt-get upgrade --force-yes --allow-unauthenticated" >> "$LOG_FILE" 2>&1
+    chroot_install "$APT_VALVE_REPO --force-yes --yes --allow-unauthenticated"
+    chroot "$ROOT" /bin/sh -c "apt-get update && apt-get upgrade --force-yes --yes --allow-unauthenticated" >> "$LOG_FILE" 2>&1
 
     chroot_install "$APT_LOCALES"
 
