@@ -313,15 +313,15 @@ Pin-Priority: 500
 
 Package: *
 Pin: release l=Debian
-Pin-Priority: 100
+Pin-Priority: -10
 
 Package: *
 Pin: release l=Debian Backports
-Pin-Priority: 50
+Pin-Priority: -10
 
 Package: *
 Pin: release l=Debian-Security
-Pin-Priority: 100
+Pin-Priority: -10
 EOF
 
     stdout "=== Configuring DNS"
