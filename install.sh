@@ -28,7 +28,7 @@ LOG_FILE="./install.log"
 APT_VALVE_REPO="valve-archive-keyring steamos-beta-repo"
 APT_LOCALES="locales locales-all"
 APT_CONSOLE="console-setup"
-APT_BASE_UTILS="acpi acpi-support-base acpid laptop-detect discover pciutils usbutils openssh-client openssh-server bash-completion command-not-found"
+APT_BASE_UTILS="acpi acpi-support-base acpid laptop-detect sudo discover pciutils usbutils openssh-client openssh-server bash-completion command-not-found"
 APT_KERNEL="linux-image-amd64 firmware-linux-free firmware-linux-nonfree firmware-realtek firmware-ralink firmware-linux"
 APT_GRUB_EFI="grub-efi-amd64"
 APT_GRUB_BIOS="grub-pc"
@@ -313,15 +313,15 @@ Pin-Priority: 500
 
 Package: *
 Pin: release l=Debian
-Pin-Priority: -10
+Pin-Priority: 100
 
 Package: *
 Pin: release l=Debian Backports
-Pin-Priority: -10
+Pin-Priority: 50
 
 Package: *
 Pin: release l=Debian-Security
-Pin-Priority: -10
+Pin-Priority: 100
 EOF
 
     stdout "=== Configuring DNS"
